@@ -1,0 +1,40 @@
+buildscript {
+    ext {
+        springBootVersion = '1.5.8.RELEASE'
+    }
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath("org.springframework.boot:spring-boot-gradle-plugin:${springBootVersion}")
+    }
+}
+
+apply plugin: 'java'
+apply plugin: 'eclipse'
+apply plugin: 'idea'
+apply plugin: 'org.springframework.boot'
+
+group = 'com.wanderingmotivation.spotify'
+version = '0.0.1-SNAPSHOT'
+sourceCompatibility = 1.8
+
+repositories {
+    mavenCentral()
+}
+
+war {
+    baseName = 'spotify-call-wrapper'
+    version = '0.0.0'
+}
+
+dependencies {
+    compile('org.springframework.boot:spring-boot-starter-data-rest',
+            'com.google.code.gson:gson:2.8.2',
+            'org.projectlombok:lombok:1.16.18',
+            'org.apache.commons:commons-collections4:4.0'
+    )
+    // Using pre-built spotify api wrapper library because maven central's is old
+    compile fileTree(dir: 'libs', include: '*.jar')
+    testCompile('org.springframework.boot:spring-boot-starter-test')
+}
