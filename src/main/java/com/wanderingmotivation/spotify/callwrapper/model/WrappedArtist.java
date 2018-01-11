@@ -11,14 +11,14 @@ import java.util.stream.Collectors;
  */
 @Data
 public class WrappedArtist {
-    private String artistId;
+    private String spotifyId;
     private List<String> genres;
     private String name;
     private int popularity;
     private List<String> imageUrls;
 
     public WrappedArtist(final Artist artist) {
-        this.artistId = artist.getId();
+        this.spotifyId = artist.getId();
         this.genres = artist.getGenres();
         this.name = artist.getName();
         this.popularity = artist.getPopularity();

@@ -14,7 +14,7 @@ import java.util.stream.Collectors;
  */
 @Data
 public class WrappedAlbum {
-    private String albumId;
+    private String spotifyId;
     private List<String> artistIds;
     private AlbumType albumType;
     private List<String> availableMarkets;
@@ -26,7 +26,7 @@ public class WrappedAlbum {
     private String releaseDatePrecision;
 
     public WrappedAlbum(final Album album) {
-        this.albumId = album.getId();
+        this.spotifyId = album.getId();
         this.artistIds = album.getArtists()
                 .stream()
                 .map(SimpleArtist::getId)

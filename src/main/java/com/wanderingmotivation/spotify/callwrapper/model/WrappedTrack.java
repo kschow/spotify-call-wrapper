@@ -14,7 +14,7 @@ import java.util.stream.Collectors;
 @Data
 public class WrappedTrack {
     private String name;
-    private String trackId;
+    private String spotifyId;
     private List<String> artistIds;
     private String albumId;
     private List<String> availableMarkets;
@@ -46,7 +46,7 @@ public class WrappedTrack {
 
     public void setTrackProperties(final Track track) {
         name = track.getName();
-        trackId = track.getId();
+        spotifyId = track.getId();
         artistIds = track.getArtists().stream().map(SimpleArtist::getId).collect(Collectors.toList());
         albumId = track.getAlbum().getId();
         availableMarkets = track.getAvailableMarkets();

@@ -2,22 +2,29 @@ package com.wanderingmotivation.spotify.callwrapper;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import com.wanderingmotivation.spotify.callwrapper.model.FrontEndData;
 import com.wanderingmotivation.spotify.callwrapper.model.WrappedAlbum;
 import com.wanderingmotivation.spotify.callwrapper.model.WrappedArtist;
 import com.wanderingmotivation.spotify.callwrapper.model.WrappedTrack;
 import com.wrapper.spotify.Api;
 import com.wrapper.spotify.exceptions.BadRequestException;
 import com.wrapper.spotify.exceptions.WebApiException;
-import com.wrapper.spotify.models.*;
+import com.wrapper.spotify.models.Album;
+import com.wrapper.spotify.models.Artist;
+import com.wrapper.spotify.models.AudioFeature;
+import com.wrapper.spotify.models.ClientCredentials;
+import com.wrapper.spotify.models.Page;
+import com.wrapper.spotify.models.SimpleAlbum;
+import com.wrapper.spotify.models.SimpleTrack;
+import com.wrapper.spotify.models.Track;
 import org.apache.commons.collections4.ListUtils;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.io.IOException;
 import java.util.Collection;
@@ -28,7 +35,8 @@ import java.util.concurrent.ExecutionException;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-@Controller
+@RestController
+@CrossOrigin
 public class SpotifyService {
     private static final Logger LOGGER = Logger.getLogger(SpotifyService.class);
     private static final Gson GSON = new GsonBuilder().serializeNulls().create();
@@ -84,17 +92,15 @@ public class SpotifyService {
     }
 
     @GetMapping("/search/artist")
-    @ResponseBody
-    public String searchForArtist(@RequestParam final String search)
+    public List<WrappedArtist> searchForArtist(@RequestParam final String search)
             throws WebApiException, ExecutionException, InterruptedException, IOException {
         final Page<Artist> spotifyArtists = getSpotifyObject(search,
                 throwingFunctionWrapper(s -> spotifyApi.searchArtists(s).build().get()));
 
-        final List<WrappedArtist> artists = spotifyArtists.getItems()
+        return spotifyArtists.getItems()
                 .stream()
                 .map(WrappedArtist::new)
                 .collect(Collectors.toList());
-        return GSON.toJson(artists);
     }
 
     @GetMapping("/search/album")
@@ -118,17 +124,16 @@ public class SpotifyService {
         return GSON.toJson(albums);
     }
 
-    @GetMapping("/getArtistInfo/{id}")
-    @ResponseBody
-    public String getArtistInfo(@PathVariable final String id)
+    @GetMapping("/getArtistInfo/{artistId}")
+    public Map<String, Object> getArtistInfo(@PathVariable final String artistId)
             throws WebApiException, ExecutionException, InterruptedException, IOException {
         final long startTime = System.currentTimeMillis();
         LOGGER.info("starting get info");
 
-        final Artist spotifyArtist = getSpotifyObject(id,
+        final Artist spotifyArtist = getSpotifyObject(artistId,
                 throwingFunctionWrapper(aid -> spotifyApi.getArtist(aid).build().get()));
 
-        final Page<SimpleAlbum> spotifyArtistSimpleAlbums = getSpotifyObject(id,
+        final Page<SimpleAlbum> spotifyArtistSimpleAlbums = getSpotifyObject(artistId,
                 throwingFunctionWrapper(aid -> spotifyApi.getAlbumsForArtist(aid).build().get()));
 
         final Map<String, WrappedArtist> artists = new HashMap<>();
@@ -147,7 +152,7 @@ public class SpotifyService {
         final Map<String, WrappedAlbum> albums = spotifyArtistAlbums
                 .stream()
                 .map(WrappedAlbum::new)
-                .collect(Collectors.toMap(WrappedAlbum::getAlbumId, x -> x));
+                .collect(Collectors.toMap(WrappedAlbum::getSpotifyId, x -> x));
 
         final List<String> trackIds = spotifyArtistAlbums
                 .stream()
@@ -160,20 +165,21 @@ public class SpotifyService {
         final long albumTime = System.currentTimeMillis();
         LOGGER.info("got album info, took: " + (albumTime - artistTime) + "ms");
 
-        final Map<String, WrappedTrack> tracks = getTracks(trackIds);
+        final List<WrappedTrack> tracks = getTracks(trackIds, artistId);
 
         final long trackTime = System.currentTimeMillis();
         LOGGER.info("got track info, took: " + (trackTime - albumTime) + "ms");
 
-        final Map<String, Map> data = new HashMap<>();
+        final Map<String, Object> data = new HashMap<>();
         data.put("albums", albums);
         data.put("artists", artists);
         data.put("tracks", tracks);
-        return GSON.toJson(new FrontEndData(data));
+        return data;
     }
 
-    private Map<String, WrappedTrack> getTracks(final List<String> trackIds)
+    private List<WrappedTrack> getTracks(final List<String> trackIds, final String artistId)
             throws WebApiException, ExecutionException, InterruptedException, IOException {
+        // temporary map for faster access during building of wrapped tracks
         final Map<String, WrappedTrack> tracks = new HashMap<>();
 
         /*
@@ -193,12 +199,24 @@ public class SpotifyService {
                 tracks.put(t.getId(), new WrappedTrack(t));
             }
             for (final AudioFeature a : spotifyAudioFeatures) {
+                /*
+                    some tracks don't have audio features so their slot in the list is empty, hence the null check
+                    this behavior of empty slots
+                    appears to have to do with how the json is unmarshalled in the Java Spotify API
+                */
                 if (a != null && tracks.containsKey(a.getId())) {
                     final WrappedTrack t = tracks.get(a.getId());
                     t.setAudioFeatures(a);
                 }
             }
         }
-        return tracks;
+
+        return tracks.entrySet()
+                .stream()
+                .map(Map.Entry::getValue)
+                // remove tracks that might be on collaborative albums that don't include the artist
+                // could do this earlier but the format of SimpleArtist makes it a bit more annoying
+                .filter(t -> t.getArtistIds().contains(artistId))
+                .collect(Collectors.toList());
     }
 }
