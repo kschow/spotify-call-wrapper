@@ -1,7 +1,5 @@
 package com.wanderingmotivation.spotify.callwrapper;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import com.wanderingmotivation.spotify.callwrapper.model.WrappedAlbum;
 import com.wanderingmotivation.spotify.callwrapper.model.WrappedArtist;
 import com.wanderingmotivation.spotify.callwrapper.model.WrappedTrack;
@@ -24,7 +22,6 @@ import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.io.IOException;
@@ -40,8 +37,7 @@ import java.util.stream.Collectors;
 @CrossOrigin
 public class SpotifyService {
     private static final Logger LOGGER = Logger.getLogger(SpotifyService.class);
-    private static final Gson GSON = new GsonBuilder().serializeNulls().create();
-    private static final int PARTITION_SIZE = 50;
+    private static final int TRACK_PARTITION_SIZE = 50;
 
     private final SpotifyApi spotifyApi;
     private final ClientCredentialsRequest clientCredentialsRequest;
@@ -77,6 +73,13 @@ public class SpotifyService {
         };
     }
 
+    /**
+     * Wraps the getting of a Spotify Object from the API
+     * Mainly important to make sure a valid auth token exists and is available for requests
+     * @param id Argument for spotifyApiRequest below
+     * @param spotifyApiRequest The request function to get a Spotify object
+     * @return The object gotten from a spotifyApiRequest
+     */
     private <T, K, F extends Function<K, T>> T getSpotifyObject(final K id,
                                                                 final F spotifyApiRequest)
             throws SpotifyWebApiException, IOException {
@@ -96,6 +99,11 @@ public class SpotifyService {
         return spotifyObject;
     }
 
+    /**
+     * Searches for an artist
+     * @param search search parameter matching spotify-web-api-java's SearchArtistsRequest
+     * @return list of artists returned
+     */
     @GetMapping("/search/artist")
     public List<WrappedArtist> searchForArtist(@RequestParam final String search)
             throws SpotifyWebApiException, IOException {
@@ -107,9 +115,13 @@ public class SpotifyService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Searches for an album
+     * @param search search parameter matching spotify-web-api-java's SearchAlbumsRequest
+     * @return list of albums returned
+     */
     @GetMapping("/search/album")
-    @ResponseBody
-    public String searchForAlbum(@RequestParam final String search)
+    public List<WrappedAlbum> searchForAlbum(@RequestParam final String search)
             throws SpotifyWebApiException, IOException {
         final Paging<AlbumSimplified> simpleAlbums = getSpotifyObject(search,
                 throwingFunctionWrapper(s -> spotifyApi.searchAlbums(s).build().execute()));
@@ -118,15 +130,21 @@ public class SpotifyService {
                 .collect(Collectors.toList())
                 .toArray(new String[] {});
 
-        final Album[] spotifyAlbums = getSpotifyObject(search,
-                throwingFunctionWrapper(s -> spotifyApi.getSeveralAlbums(albumIds).build().execute()));
-        final List<WrappedAlbum> albums = Arrays.stream(spotifyAlbums)
+        final Album[] spotifyAlbums = getSpotifyObject(albumIds,
+                throwingFunctionWrapper(aids -> spotifyApi.getSeveralAlbums(aids).build().execute()));
+        return Arrays.stream(spotifyAlbums)
                 .map(WrappedAlbum::new)
                 .collect(Collectors.toList());
-
-        return GSON.toJson(albums);
     }
 
+    /**
+     * Get full artist information including:
+     * All albums for an artist
+     * All tracks for an artist
+     * Full artist information
+     * @param artistId Spotify URI for an artist
+     * @return Map of artist, track, and album information
+     */
     @GetMapping("/getArtistInfo/{artistId}")
     public Map<String, Object> getArtistInfo(@PathVariable final String artistId)
             throws SpotifyWebApiException, IOException {
@@ -168,7 +186,7 @@ public class SpotifyService {
         final long albumTime = System.currentTimeMillis();
         LOGGER.info("got album info, took: " + (albumTime - artistTime) + "ms");
 
-        final Map<String, WrappedTrack> tracks = getTracks(trackIds, artistId);
+        final Map<String, WrappedTrack> tracks = getManyTracks(trackIds, artistId);
 
         final long trackTime = System.currentTimeMillis();
         LOGGER.info("got track info, took: " + (trackTime - albumTime) + "ms");
@@ -180,34 +198,22 @@ public class SpotifyService {
         return data;
     }
 
-    private Map<String, WrappedTrack> getTracks(final List<String> trackIds, final String artistId)
+    private Map<String, WrappedTrack> getManyTracks(final List<String> trackIds, final String artistId)
             throws SpotifyWebApiException, IOException {
         final Map<String, WrappedTrack> tracks = new HashMap<>();
-
-        /*
-            This partitioning is done to make sure that requests are of valid length
-            Since Spotify doesn't tell us exactly how long a Spotify ID is,
-            I just checked a couple and they were around 20 characters
-            By partitioning into chunks with 50 ids each, I'm giving it a bit of headroom
-        */
-        final List<List<String>> partitions = ListUtils.partition(trackIds, PARTITION_SIZE);
+        final List<List<String>> partitions = ListUtils.partition(trackIds, TRACK_PARTITION_SIZE);
         for (final List<String> chunk : partitions) {
-            final String[] chunkArray = chunk.toArray(new String[]{});
-            final Track[] spotifyTracks = getSpotifyObject(chunk,
-                    throwingFunctionWrapper(ids -> spotifyApi.getSeveralTracks(chunkArray).build().execute()));
-            final AudioFeatures[] spotifyAudioFeatures = getSpotifyObject(chunk,
-                    throwingFunctionWrapper(ids -> spotifyApi.getAudioFeaturesForSeveralTracks(chunkArray)
-                            .build().execute()));
+            final String[] chunkArray = chunk.toArray(new String[] {});
+            final Track[] spotifyTracks = getSpotifyObject(chunkArray,
+                    throwingFunctionWrapper(ids -> spotifyApi.getSeveralTracks(ids).build().execute()));
+            final AudioFeatures[] spotifyAudioFeatures = getSpotifyObject(chunkArray,
+                    throwingFunctionWrapper(ids -> spotifyApi.getAudioFeaturesForSeveralTracks(ids).build().execute()));
 
             for (final Track t : spotifyTracks) {
                 tracks.put(t.getId(), new WrappedTrack(t));
             }
             for (final AudioFeatures a : spotifyAudioFeatures) {
-                /*
-                    some tracks don't have audio features so their slot in the list is empty, hence the null check
-                    this behavior of empty slots
-                    appears to have to do with how the json is unmarshalled in the Java Spotify API
-                */
+                // some tracks don't have audio features so their slot in the list is empty, hence the null check
                 if (a != null && tracks.containsKey(a.getId())) {
                     final WrappedTrack t = tracks.get(a.getId());
                     t.setAudioFeatures(a);
@@ -220,7 +226,7 @@ public class SpotifyService {
                 .map(Map.Entry::getValue)
                 // remove tracks that might be on collaborative albums that don't include the artist
                 // could do this earlier but the format of SimpleArtist makes it a bit more annoying
-                .filter(t -> t.getArtistIds().contains(artistId))
+                .filter(t -> artistId == null || t.getArtistIds().contains(artistId))
                 .collect(Collectors.toMap(WrappedTrack::getSpotifyId, t -> t));
     }
 }
