@@ -1,10 +1,12 @@
 package com.wanderingmotivation.spotify.callwrapper.model;
 
-import com.wrapper.spotify.models.AudioFeature;
-import com.wrapper.spotify.models.SimpleArtist;
-import com.wrapper.spotify.models.Track;
+import com.neovisionaries.i18n.CountryCode;
+import com.wrapper.spotify.model_objects.specification.ArtistSimplified;
+import com.wrapper.spotify.model_objects.specification.AudioFeatures;
+import com.wrapper.spotify.model_objects.specification.Track;
 import lombok.Data;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -20,17 +22,17 @@ public class WrappedTrack {
     private List<String> availableMarkets;
     private Integer popularity;
     private Integer trackNumber;
-    private Double danceability;
-    private Double energy;
+    private Float danceability;
+    private Float energy;
     private Integer key;
-    private Double loudness;
+    private Float loudness;
     private Integer mode;
-    private Double speechiness;
-    private Double acousticness;
-    private Double instrumentalness;
-    private Double liveness;
-    private Double valence;
-    private Double tempo;
+    private Float speechiness;
+    private Float acousticness;
+    private Float instrumentalness;
+    private Float liveness;
+    private Float valence;
+    private Float tempo;
     private Integer durationMs;
     private Integer timeSignature;
 
@@ -39,34 +41,38 @@ public class WrappedTrack {
         setTrackProperties(track);
     }
 
-    public WrappedTrack(final AudioFeature audioFeature) {
+    public WrappedTrack(final AudioFeatures audioFeatures) {
         super();
-        setAudioFeatures(audioFeature);
+        setAudioFeatures(audioFeatures);
     }
 
     public void setTrackProperties(final Track track) {
         name = track.getName();
         spotifyId = track.getId();
-        artistIds = track.getArtists().stream().map(SimpleArtist::getId).collect(Collectors.toList());
+        artistIds = Arrays.stream(track.getArtists())
+                .map(ArtistSimplified::getId)
+                .collect(Collectors.toList());
         albumId = track.getAlbum().getId();
-        availableMarkets = track.getAvailableMarkets();
+        availableMarkets = Arrays.stream(track.getAvailableMarkets())
+                .map(CountryCode::toString)
+                .collect(Collectors.toList());
         popularity = track.getPopularity();
         trackNumber = track.getTrackNumber();
     }
 
-    public void setAudioFeatures(final AudioFeature audioFeature) {
-        danceability = audioFeature.getDanceability();
-        energy = audioFeature.getEnergy();
-        key = audioFeature.getKey();
-        loudness = audioFeature.getLoudness();
-        mode = audioFeature.getMode();
-        speechiness = audioFeature.getSpeechiness();
-        acousticness = audioFeature.getAcousticness();
-        instrumentalness = audioFeature.getInstrumentalness();
-        liveness = audioFeature.getLiveness();
-        valence = audioFeature.getValence();
-        tempo = audioFeature.getTempo();
-        durationMs = audioFeature.getDurationMs();
-        timeSignature = audioFeature.getTimeSignature();
+    public void setAudioFeatures(final AudioFeatures audioFeatures) {
+        danceability = audioFeatures.getDanceability();
+        energy = audioFeatures.getEnergy();
+        key = audioFeatures.getKey();
+        loudness = audioFeatures.getLoudness();
+        mode = audioFeatures.getMode().getType();
+        speechiness = audioFeatures.getSpeechiness();
+        acousticness = audioFeatures.getAcousticness();
+        instrumentalness = audioFeatures.getInstrumentalness();
+        liveness = audioFeatures.getLiveness();
+        valence = audioFeatures.getValence();
+        tempo = audioFeatures.getTempo();
+        durationMs = audioFeatures.getDurationMs();
+        timeSignature = audioFeatures.getTimeSignature();
     }
 }

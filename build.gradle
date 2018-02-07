@@ -32,9 +32,8 @@ dependencies {
     compile('org.springframework.boot:spring-boot-starter-data-rest',
             'com.google.code.gson:gson:2.8.2',
             'org.projectlombok:lombok:1.16.18',
-            'org.apache.commons:commons-collections4:4.0'
+            'org.apache.commons:commons-collections4:4.0',
+            'se.michaelthelin.spotify:spotify-web-api-java:2.0.0-RC1'
     )
-    // Using pre-built spotify api wrapper library because maven central's is old
-    compile fileTree(dir: 'libs', include: '*.jar')
     testCompile('org.springframework.boot:spring-boot-starter-test')
 }
