@@ -5,6 +5,7 @@ import com.wrapper.spotify.enums.AlbumType;
 import com.wrapper.spotify.model_objects.specification.Album;
 import com.wrapper.spotify.model_objects.specification.ArtistSimplified;
 import com.wrapper.spotify.model_objects.specification.Image;
+import com.wrapper.spotify.model_objects.specification.TrackSimplified;
 import lombok.Data;
 
 import java.util.Arrays;
@@ -24,6 +25,7 @@ public class WrappedAlbum {
     private String name;
     private int popularity;
     private List<String> imageUrls;
+    private List<String> trackIds;
     private String releaseDate;
     private String releaseDatePrecision;
 
@@ -44,5 +46,8 @@ public class WrappedAlbum {
         this.popularity = album.getPopularity();
         this.releaseDate = album.getReleaseDate();
         this.releaseDatePrecision = album.getReleaseDatePrecision().toString();
+        this.trackIds = Arrays.stream(album.getTracks().getItems())
+                .map(TrackSimplified::getId)
+                .collect(Collectors.toList());
     }
 }
