@@ -1,0 +1,9 @@
+Some notable spotify ids for testing things. May add unit tests if I decide it's worth it.
+At which point these might still be useful for some sort of functional tests.
+
+// large # tracks for an album (Brahms: Complete Works for Solo Piano, 162)
+5fPHfWxEEIQbWdLbUszJXa
+
+// large # albums for an artist (Brahms, many)
+5wTAi7QkpP6kp8a54lmTOq
+
