@@ -14,6 +14,7 @@ import com.wrapper.spotify.model_objects.specification.Artist;
 import com.wrapper.spotify.model_objects.specification.AudioFeatures;
 import com.wrapper.spotify.model_objects.specification.Paging;
 import com.wrapper.spotify.model_objects.specification.Track;
+import com.wrapper.spotify.model_objects.specification.TrackSimplified;
 import com.wrapper.spotify.requests.authorization.client_credentials.ClientCredentialsRequest;
 import org.apache.commons.collections4.ListUtils;
 import org.apache.log4j.Logger;
@@ -27,12 +28,13 @@ import org.springframework.web.bind.annotation.RestController;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+
+import static com.wanderingmotivation.spotify.callwrapper.util.ThrowingFunctionWrappers.throwingFunctionWrapper;
 
 @RestController
 @CrossOrigin
@@ -40,7 +42,7 @@ public class SpotifyService {
     private static final Logger LOGGER = Logger.getLogger(SpotifyService.class);
     private static final int ALBUM_PARTITION_SIZE = 20;
     private static final int TRACK_PARTITION_SIZE = 50;
-    private static final int MAX_ALBUM_PAGE_SIZE = TRACK_PARTITION_SIZE;
+    private static final int PAGE_SIZE = TRACK_PARTITION_SIZE;
 
     private final SpotifyApi spotifyApi;
     private final ClientCredentialsRequest clientCredentialsRequest;
@@ -58,22 +60,6 @@ public class SpotifyService {
         final ClientCredentials credentials = clientCredentialsRequest.execute();
         spotifyApi.setAccessToken(credentials.getAccessToken());
         LOGGER.info("Credentials expire in: " + credentials.getExpiresIn());
-    }
-
-    @FunctionalInterface
-    interface ThrowingFunction<T, R, E extends Exception> {
-        R apply(T t) throws E;
-    }
-
-    private <T, R> Function<T, R> throwingFunctionWrapper(ThrowingFunction<T, R, Exception> throwingFunction) {
-        return  i -> {
-            try {
-                return throwingFunction.apply(i);
-            } catch (final Exception e) {
-                LOGGER.info(e, e);
-                throw new RuntimeException(e);
-            }
-        };
     }
 
     /**
@@ -111,7 +97,7 @@ public class SpotifyService {
     public List<WrappedArtist> searchForArtist(@RequestParam final String search)
             throws SpotifyWebApiException, IOException {
         final Paging<Artist> spotifyArtists = getSpotifyObject(search,
-                throwingFunctionWrapper(s -> spotifyApi.searchArtists(s).build().execute()));
+                throwingFunctionWrapper(s -> spotifyApi.searchArtists(s).build().execute(), LOGGER));
 
         return Arrays.stream(spotifyArtists.getItems())
                 .map(WrappedArtist::new)
@@ -127,14 +113,14 @@ public class SpotifyService {
     public List<WrappedAlbum> searchForAlbum(@RequestParam final String search)
             throws SpotifyWebApiException, IOException {
         final Paging<AlbumSimplified> simpleAlbums = getSpotifyObject(search,
-                throwingFunctionWrapper(s -> spotifyApi.searchAlbums(s).build().execute()));
+                throwingFunctionWrapper(s -> spotifyApi.searchAlbums(s).build().execute(), LOGGER));
         final String[] albumIds = Arrays.stream(simpleAlbums.getItems())
                 .map(AlbumSimplified::getId)
                 .collect(Collectors.toList())
                 .toArray(new String[] {});
 
         final Album[] spotifyAlbums = getSpotifyObject(albumIds,
-                throwingFunctionWrapper(aids -> spotifyApi.getSeveralAlbums(aids).build().execute()));
+                throwingFunctionWrapper(aids -> spotifyApi.getSeveralAlbums(aids).build().execute(), LOGGER));
         return Arrays.stream(spotifyAlbums)
                 .map(WrappedAlbum::new)
                 .collect(Collectors.toList());
@@ -155,7 +141,7 @@ public class SpotifyService {
         LOGGER.info("starting get info");
 
         final Artist spotifyArtist = getSpotifyObject(artistId,
-                throwingFunctionWrapper(aid -> spotifyApi.getArtist(aid).build().execute()));
+                throwingFunctionWrapper(aid -> spotifyApi.getArtist(aid).build().execute(), LOGGER));
 
         final Map<String, WrappedArtist> artists = new HashMap<>();
         artists.put(spotifyArtist.getId(), new WrappedArtist(spotifyArtist));
@@ -165,16 +151,16 @@ public class SpotifyService {
 
         final Map<String, WrappedAlbum> albums = getManyAlbums(artistId);
 
-        final List<String> trackIds = albums.entrySet()
+        final List<String> albumIds = albums.entrySet()
                 .stream()
                 .map(Map.Entry::getValue)
-                .map(WrappedAlbum::getTrackIds)
-                .flatMap(Collection::stream)
+                .map(WrappedAlbum::getSpotifyId)
                 .collect(Collectors.toList());
 
         final long albumTime = System.currentTimeMillis();
         LOGGER.info("got album info, took: " + (albumTime - artistTime) + "ms");
 
+        final List<String> trackIds = getAlbumTracks(albumIds);
         final Map<String, WrappedTrack> tracks = getManyTracks(trackIds, artistId);
 
         final long trackTime = System.currentTimeMillis();
@@ -190,25 +176,25 @@ public class SpotifyService {
     private Map<String, WrappedAlbum> getManyAlbums(final String artistId) throws SpotifyWebApiException, IOException {
         final List<String> albumIds = new ArrayList<>();
 
-        for (int i = 0; ; i += MAX_ALBUM_PAGE_SIZE) {
+        for (int i = 0; ; i += PAGE_SIZE) {
             final int offset = i;
             final Paging<AlbumSimplified> page = getSpotifyObject(artistId,
                     throwingFunctionWrapper(s ->
                             spotifyApi.getArtistsAlbums(s)
                                     .market(CountryCode.US)
                                     .album_type("single,album")
-                                    .limit(MAX_ALBUM_PAGE_SIZE)
+                                    .limit(PAGE_SIZE)
                                     .offset(offset)
                                     .build()
-                                    .execute()));
+                                    .execute(), LOGGER));
             final int totalAlbums = page.getTotal();
             LOGGER.info(String.format("getting ids for albums %s to %s out of %s",
-                    i, i + MAX_ALBUM_PAGE_SIZE, totalAlbums));
+                    i, i + PAGE_SIZE, totalAlbums));
             albumIds.addAll(Arrays.stream(page.getItems())
                     .map(AlbumSimplified::getId)
                     .collect(Collectors.toList()));
 
-            if (offset + MAX_ALBUM_PAGE_SIZE >= totalAlbums) {
+            if (offset + PAGE_SIZE >= totalAlbums) {
                 break;
             }
         }
@@ -218,12 +204,41 @@ public class SpotifyService {
         for (final List<String> chunk : partitions) {
             final String[] chunkArray = chunk.toArray(new String[] {});
             final Album[] spotifyAlbums = getSpotifyObject(chunkArray,
-                    throwingFunctionWrapper(ids -> spotifyApi.getSeveralAlbums(ids).build().execute()));
+                    throwingFunctionWrapper(ids -> spotifyApi.getSeveralAlbums(ids).build().execute(), LOGGER));
             for (final Album a : spotifyAlbums) {
                 albums.put(a.getId(), new WrappedAlbum(a));
             }
         }
         return albums;
+    }
+
+    private List<String> getAlbumTracks(final List<String> albumIds) throws IOException, SpotifyWebApiException {
+        final List<String> trackIds = new ArrayList<>();
+
+        for (final String albumId : albumIds) {
+            for (int i = 0; ; i += PAGE_SIZE) {
+                final int offset = i;
+                final Paging<TrackSimplified> page = getSpotifyObject(albumId,
+                        throwingFunctionWrapper(s ->
+                                spotifyApi.getAlbumsTracks(s)
+                                        .market(CountryCode.US)
+                                        .limit(PAGE_SIZE)
+                                        .offset(offset)
+                                        .build()
+                                        .execute(), LOGGER));
+                final int totalTracks = page.getTotal();
+                LOGGER.info(String.format("getting ids for tracks %s to %s out of %s",
+                        i, i + PAGE_SIZE, totalTracks));
+                trackIds.addAll(Arrays.stream(page.getItems())
+                        .map(TrackSimplified::getId)
+                        .collect(Collectors.toList()));
+
+                if (offset + PAGE_SIZE >= totalTracks) {
+                    break;
+                }
+            }
+        }
+        return trackIds;
     }
 
     private Map<String, WrappedTrack> getManyTracks(final List<String> trackIds, final String artistId)
@@ -233,9 +248,10 @@ public class SpotifyService {
         for (final List<String> chunk : partitions) {
             final String[] chunkArray = chunk.toArray(new String[] {});
             final Track[] spotifyTracks = getSpotifyObject(chunkArray,
-                    throwingFunctionWrapper(ids -> spotifyApi.getSeveralTracks(ids).build().execute()));
+                    throwingFunctionWrapper(ids -> spotifyApi.getSeveralTracks(ids).build().execute(), LOGGER));
             final AudioFeatures[] spotifyAudioFeatures = getSpotifyObject(chunkArray,
-                    throwingFunctionWrapper(ids -> spotifyApi.getAudioFeaturesForSeveralTracks(ids).build().execute()));
+                    throwingFunctionWrapper(ids -> spotifyApi.getAudioFeaturesForSeveralTracks(ids).build().execute(),
+                            LOGGER));
 
             for (final Track t : spotifyTracks) {
                 tracks.put(t.getId(), new WrappedTrack(t));
