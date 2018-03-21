@@ -13,12 +13,14 @@ public class WrappedPlaylist {
     private String spotifyId;
     private String userId;
     private String name;
-    private List<Image> images;
+    private List<String> imageUrls;
 
     public WrappedPlaylist(final PlaylistSimplified playlist) {
         this.spotifyId = playlist.getId();
         this.userId = playlist.getOwner().getId();
         this.name = playlist.getName();
-        this.images = Arrays.stream(playlist.getImages()).collect(Collectors.toList());
+        this.imageUrls = Arrays.stream(playlist.getImages())
+                .map(Image::getUrl)
+                .collect(Collectors.toList());
     }
 }
