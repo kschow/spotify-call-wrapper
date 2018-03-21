@@ -197,15 +197,6 @@ public class SpotifyService {
         final long startTime = System.currentTimeMillis();
         LOGGER.info("starting get info");
 
-        final Artist spotifyArtist = getSpotifyObjectFunction(artistId,
-                throwingFunctionWrapper(aid -> spotifyApi.getArtist(aid).build().execute()));
-
-        final Map<String, WrappedArtist> artists = new HashMap<>();
-        artists.put(spotifyArtist.getId(), new WrappedArtist(spotifyArtist));
-
-        final long artistTime = System.currentTimeMillis();
-        LOGGER.info("got artist info, took: " + (artistTime - startTime) + "ms");
-
         final Map<String, WrappedAlbum> albums = getManyAlbums(artistId);
 
         final List<String> albumIds = albums.entrySet()
@@ -215,7 +206,7 @@ public class SpotifyService {
                 .collect(Collectors.toList());
 
         final long albumTime = System.currentTimeMillis();
-        LOGGER.info("got album info, took: " + (albumTime - artistTime) + "ms");
+        LOGGER.info("got album info, took: " + (albumTime - startTime) + "ms");
 
         final List<String> trackIds = getAlbumTracks(albumIds);
         final Map<String, WrappedTrack> tracks = getManyTracks(trackIds, artistId);
