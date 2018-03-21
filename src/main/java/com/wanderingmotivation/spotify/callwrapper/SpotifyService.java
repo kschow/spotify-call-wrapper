@@ -185,17 +185,14 @@ public class SpotifyService {
     }
 
     /**
-     * Get full artist information including:
-     * All albums for an artist
-     * All tracks for an artist
-     * Full artist information
+     * Get full track information for an artist
      * @param artistId Spotify URI for an artist
      * @return Map of artist, track, and album information
      * @throws IOException
      * @throws SpotifyWebApiException
      */
-    @GetMapping("/getArtistInfo/{artistId}")
-    public Map<String, Object> getArtistInfo(@PathVariable final String artistId)
+    @GetMapping("/getArtistTracks/{artistId}")
+    public Map<String, WrappedTrack> getArtistTracks(@PathVariable final String artistId)
             throws SpotifyWebApiException, IOException {
         final long startTime = System.currentTimeMillis();
         LOGGER.info("starting get info");
@@ -226,11 +223,7 @@ public class SpotifyService {
         final long trackTime = System.currentTimeMillis();
         LOGGER.info("got track info, took: " + (trackTime - albumTime) + "ms");
 
-        final Map<String, Object> data = new HashMap<>();
-        data.put("albums", albums);
-        data.put("artists", artists);
-        data.put("tracks", tracks);
-        return data;
+        return tracks;
     }
 
     /**
