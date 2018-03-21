@@ -20,7 +20,6 @@ public class WrappedAlbum {
     private String spotifyId;
     private List<String> artistIds;
     private AlbumType albumType;
-    private List<String> availableMarkets;
     private List<String> genres;
     private String name;
     private int popularity;
@@ -35,10 +34,6 @@ public class WrappedAlbum {
                 .map(ArtistSimplified::getId)
                 .collect(Collectors.toList());
         this.albumType = album.getAlbumType();
-        this.availableMarkets = Arrays.stream(album.getAvailableMarkets())
-                .map(CountryCode::toString)
-                .collect(Collectors.toList());
-        this.genres = Arrays.asList(album.getGenres());
         this.name = album.getName();
         this.imageUrls = Arrays.stream(album.getImages())
                 .map(Image::getUrl)

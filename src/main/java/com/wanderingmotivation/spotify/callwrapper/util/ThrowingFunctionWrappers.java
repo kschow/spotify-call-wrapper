@@ -2,6 +2,7 @@ package com.wanderingmotivation.spotify.callwrapper.util;
 
 import org.apache.log4j.Logger;
 
+import java.util.function.BiFunction;
 import java.util.function.Function;
 
 /**
@@ -9,13 +10,21 @@ import java.util.function.Function;
  * Class is explicitly final so no one subclasses it
  */
 public final class ThrowingFunctionWrappers {
-    public static <T, R> Function<T, R> throwingFunctionWrapper(final ThrowingFunction<T, R, Exception> throwingFunction,
-                                                                final Logger logger) {
+    public static <T, R> Function<T, R> throwingFunctionWrapper(final ThrowingFunction<T, R, Exception> throwingFunction) {
         return i -> {
             try {
                 return throwingFunction.apply(i);
             } catch (final Exception e) {
-                logger.info(e, e);
+                throw new RuntimeException(e);
+            }
+        };
+    }
+
+    public static <T, U, R> BiFunction<T, U, R> throwingBiFunctionWrapper(final ThrowingBiFunction<T, U, R, Exception> throwingBiFunction) {
+        return (i, j) -> {
+            try {
+                return throwingBiFunction.apply(i, j);
+            } catch (final Exception e) {
                 throw new RuntimeException(e);
             }
         };

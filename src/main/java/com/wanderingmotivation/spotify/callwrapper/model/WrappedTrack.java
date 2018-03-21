@@ -19,7 +19,6 @@ public class WrappedTrack {
     private String spotifyId;
     private List<String> artistIds;
     private String albumId;
-    private List<String> availableMarkets;
     private Integer popularity;
     private Integer trackNumber;
     private Float danceability;
@@ -53,9 +52,6 @@ public class WrappedTrack {
                 .map(ArtistSimplified::getId)
                 .collect(Collectors.toList());
         albumId = track.getAlbum().getId();
-        availableMarkets = Arrays.stream(track.getAvailableMarkets())
-                .map(CountryCode::toString)
-                .collect(Collectors.toList());
         popularity = track.getPopularity();
         trackNumber = track.getTrackNumber();
     }
