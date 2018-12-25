@@ -1,7 +1,5 @@
 package com.wanderingmotivation.spotify.callwrapper.util;
 
-import org.apache.log4j.Logger;
-
 import java.util.function.BiFunction;
 import java.util.function.Function;
 

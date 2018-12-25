@@ -1,6 +1,5 @@
 package com.wanderingmotivation.spotify.callwrapper.model;
 
-import com.neovisionaries.i18n.CountryCode;
 import com.wrapper.spotify.enums.AlbumType;
 import com.wrapper.spotify.model_objects.specification.Album;
 import com.wrapper.spotify.model_objects.specification.ArtistSimplified;

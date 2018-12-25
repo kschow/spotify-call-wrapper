@@ -1,6 +1,5 @@
 package com.wanderingmotivation.spotify.callwrapper.model;
 
-import com.neovisionaries.i18n.CountryCode;
 import com.wrapper.spotify.model_objects.specification.ArtistSimplified;
 import com.wrapper.spotify.model_objects.specification.AudioFeatures;
 import com.wrapper.spotify.model_objects.specification.Track;
