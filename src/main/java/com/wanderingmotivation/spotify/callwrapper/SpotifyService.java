@@ -81,6 +81,7 @@ public class SpotifyService {
 
     /**
      * Gets all tracks for a playlist
+     * Deprecated until associated change made in visualizer
      * @param userId owner's user id
      * @param playlistId Spotify playlist id
      * @return map of track id to track information
@@ -88,9 +89,24 @@ public class SpotifyService {
      * @throws SpotifyWebApiException Thrown when there is some Spotify error, e.g. TooManyRequestsException
      */
     @GetMapping("/getPlaylistTracks/{userId}/{playlistId}")
+    @Deprecated
     public Map<String, WrappedTrack> getPlaylistTracks(@PathVariable final String userId,
                                                        @PathVariable final String playlistId)
             throws IOException, SpotifyWebApiException {
-        return spotifyCallWrapper.getPlaylistTracks(userId, playlistId);
+        return spotifyCallWrapper.getPlaylistTracks(playlistId);
+    }
+
+    /**
+     * Gets all tracks for a playlist
+     * @param playlistId Spotify playlist id
+     * @return map of track id to track information
+     * @throws IOException
+     * @throws SpotifyWebApiException Thrown when there is some Spotify error, e.g. TooManyRequestsException
+     */
+    @GetMapping("/getPlaylistTracks/{playlistId}")
+    @Deprecated
+    public Map<String, WrappedTrack> getPlaylistTracks(@PathVariable final String playlistId)
+            throws IOException, SpotifyWebApiException {
+        return spotifyCallWrapper.getPlaylistTracks(playlistId);
     }
 }

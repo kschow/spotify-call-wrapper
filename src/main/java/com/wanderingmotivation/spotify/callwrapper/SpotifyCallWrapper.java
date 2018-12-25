@@ -33,11 +33,9 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import static com.wanderingmotivation.spotify.callwrapper.util.ThrowingFunctionWrappers.throwingBiFunctionWrapper;
 import static com.wanderingmotivation.spotify.callwrapper.util.ThrowingFunctionWrappers.throwingFunctionWrapper;
 
 @Component
@@ -87,35 +85,6 @@ public class SpotifyCallWrapper {
                 LOGGER.info("bad access token, getting a new one");
                 getAuthToken();
                 spotifyObject = spotifyApiRequest.apply(id);
-            } else {
-                throw e;
-            }
-        }
-        return spotifyObject;
-    }
-
-    /**
-     * Wraps the getting of a Spotify Object from the API
-     * Mainly important to make sure a valid auth token exists and is available for requests
-     * This should be used for API requests that require two path variables, eg. getPlaylistTracks or getPlaylist
-     * @param idOne Argument for spotifyApiRequest below
-     * @param idTwo Argument for spotifyApiRequest below
-     * @param spotifyApiRequest The request function to get a Spotify object
-     * @return The object gotten from a spotifyApiRequest
-     */
-    private <T, K, L, F extends BiFunction<K, L, T>> T getSpotifyObjectBiFunction(final K idOne,
-                                                                                  final L idTwo,
-                                                                                  final F spotifyApiRequest)
-            throws SpotifyWebApiException, IOException {
-        T spotifyObject;
-        try {
-            spotifyObject = spotifyApiRequest.apply(idOne, idTwo);
-        } catch (final Exception e) {
-            if (e.getCause() instanceof UnauthorizedException) {
-                // this occurs when the access token doesn't exist or expires
-                LOGGER.info("bad access token, getting a new one");
-                getAuthToken();
-                spotifyObject = spotifyApiRequest.apply(idOne, idTwo);
             } else {
                 throw e;
             }
@@ -213,21 +182,18 @@ public class SpotifyCallWrapper {
 
     /**
      * Gets all tracks for a playlist
-     * @param userId owner's user id
      * @param playlistId Spotify playlist id
      * @return map of track id to track information
      * @throws IOException
      * @throws SpotifyWebApiException Thrown when there is some Spotify error, e.g. TooManyRequestsException
      */
-    public Map<String, WrappedTrack> getPlaylistTracks(@PathVariable final String userId,
-                                                       @PathVariable final String playlistId)
+    public Map<String, WrappedTrack> getPlaylistTracks(@PathVariable final String playlistId)
             throws IOException, SpotifyWebApiException {
         final List<String> trackIds = new ArrayList<>();
         for (int i = 0; ; i += PLAYLIST_TRACK_PAGE_SIZE) {
             final int offset = i;
-            final Paging<PlaylistTrack> page = getSpotifyObjectBiFunction(userId, playlistId,
-                    throwingBiFunctionWrapper((u, p) ->
-                            spotifyApi.getPlaylistsTracks(u, p)
+            final Paging<PlaylistTrack> page = getSpotifyObjectFunction(playlistId,
+                    throwingFunctionWrapper(p -> spotifyApi.getPlaylistsTracks(p)
                                     .market(MARKET)
                                     .limit(PLAYLIST_TRACK_PAGE_SIZE)
                                     .offset(offset)

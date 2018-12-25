@@ -1,6 +1,5 @@
 package com.wanderingmotivation.spotify.callwrapper.util;
 
-import java.util.function.BiFunction;
 import java.util.function.Function;
 
 /**
@@ -12,16 +11,6 @@ public final class ThrowingFunctionWrappers {
         return i -> {
             try {
                 return throwingFunction.apply(i);
-            } catch (final Exception e) {
-                throw new RuntimeException(e);
-            }
-        };
-    }
-
-    public static <T, U, R> BiFunction<T, U, R> throwingBiFunctionWrapper(final ThrowingBiFunction<T, U, R, Exception> throwingBiFunction) {
-        return (i, j) -> {
-            try {
-                return throwingBiFunction.apply(i, j);
             } catch (final Exception e) {
                 throw new RuntimeException(e);
             }
