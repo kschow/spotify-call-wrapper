@@ -18,6 +18,7 @@ apply plugin: 'org.springframework.boot'
 
 group = 'com.wanderingmotivation.spotify'
 sourceCompatibility = 1.8
+def lombokVersion = '1.16.18'
 
 repositories {
     mavenCentral()
@@ -29,9 +30,10 @@ war {
 }
 
 dependencies {
+    annotationProcessor "org.projectlombok:lombok:$lombokVersion"
+    compileOnly "org.projectlombok:lombok:$lombokVersion"
     compile('org.springframework.boot:spring-boot-starter-data-rest',
             'com.google.code.gson:gson:2.8.2',
-            'org.projectlombok:lombok:1.16.18',
             'org.apache.commons:commons-collections4:4.0',
             'se.michaelthelin.spotify:spotify-web-api-java:2.1.1'
     )
