@@ -2,6 +2,7 @@ package com.wanderingmotivation.spotify.callwrapper.model;
 
 import com.wrapper.spotify.model_objects.specification.Artist;
 import com.wrapper.spotify.model_objects.specification.Image;
+import lombok.AllArgsConstructor;
 import lombok.Data;
 
 import java.util.Arrays;
@@ -12,6 +13,7 @@ import java.util.stream.Collectors;
  * A simplified model for an artist
  */
 @Data
+@AllArgsConstructor
 public class WrappedArtist {
     private String spotifyId;
     private List<String> genres;
@@ -24,8 +26,10 @@ public class WrappedArtist {
         this.genres = Arrays.asList(artist.getGenres());
         this.name = artist.getName();
         this.popularity = artist.getPopularity();
-        this.imageUrls = Arrays.stream(artist.getImages())
-                .map(Image::getUrl)
-                .collect(Collectors.toList());
+        this.imageUrls = artist.getImages() != null ?
+                Arrays.stream(artist.getImages())
+                        .map(Image::getUrl)
+                        .collect(Collectors.toList()) :
+                null;
     }
 }

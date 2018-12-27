@@ -1,5 +1,6 @@
 package com.wanderingmotivation.spotify.callwrapper;
 
+import com.wanderingmotivation.spotify.callwrapper.api.spotify.SpotifyApiDataAccessor;
 import com.wanderingmotivation.spotify.callwrapper.model.WrappedAlbum;
 import com.wanderingmotivation.spotify.callwrapper.model.WrappedArtist;
 import com.wanderingmotivation.spotify.callwrapper.model.WrappedPlaylist;
@@ -21,10 +22,10 @@ import java.util.Map;
 public class SpotifyService {
     private static final Logger LOGGER = Logger.getLogger(SpotifyService.class);
 
-    private final SpotifyCallWrapper spotifyCallWrapper;
+    private final SpotifyApiDataAccessor spotifyApiDataAccessor;
 
-    SpotifyService(SpotifyCallWrapper spotifyCallWrapper) {
-        this.spotifyCallWrapper = spotifyCallWrapper;
+    SpotifyService(SpotifyApiDataAccessor spotifyApiDataAccessor) {
+        this.spotifyApiDataAccessor = spotifyApiDataAccessor;
     }
 
     /**
@@ -37,7 +38,7 @@ public class SpotifyService {
     @GetMapping("/search/artist")
     public List<WrappedArtist> searchForArtist(@RequestParam final String search)
             throws IOException, SpotifyWebApiException {
-        return spotifyCallWrapper.searchForArtist(search);
+        return spotifyApiDataAccessor.searchForArtist(search);
     }
 
     /**
@@ -50,7 +51,7 @@ public class SpotifyService {
     @GetMapping("/search/album")
     public List<WrappedAlbum> searchForAlbum(@RequestParam final String search)
             throws IOException, SpotifyWebApiException {
-        return spotifyCallWrapper.searchForAlbum(search);
+        return spotifyApiDataAccessor.searchForAlbum(search);
     }
 
     /**
@@ -63,7 +64,7 @@ public class SpotifyService {
     @GetMapping("/search/playlist")
     public List<WrappedPlaylist> searchForPlaylist(@RequestParam final String search)
             throws IOException, SpotifyWebApiException {
-        return spotifyCallWrapper.searchForPlaylist(search);
+        return spotifyApiDataAccessor.searchForPlaylist(search);
     }
 
     /**
@@ -76,7 +77,7 @@ public class SpotifyService {
     @GetMapping("/getArtistTracks/{artistId}")
     public Map<String, WrappedTrack> getArtistTracks(@PathVariable final String artistId)
             throws SpotifyWebApiException, IOException {
-        return spotifyCallWrapper.getArtistTracks(artistId);
+        return spotifyApiDataAccessor.getArtistTracks(artistId);
     }
 
     /**
@@ -93,7 +94,7 @@ public class SpotifyService {
     public Map<String, WrappedTrack> getPlaylistTracks(@PathVariable final String userId,
                                                        @PathVariable final String playlistId)
             throws IOException, SpotifyWebApiException {
-        return spotifyCallWrapper.getPlaylistTracks(playlistId);
+        return spotifyApiDataAccessor.getPlaylistTracks(playlistId);
     }
 
     /**
@@ -107,6 +108,6 @@ public class SpotifyService {
     @Deprecated
     public Map<String, WrappedTrack> getPlaylistTracks(@PathVariable final String playlistId)
             throws IOException, SpotifyWebApiException {
-        return spotifyCallWrapper.getPlaylistTracks(playlistId);
+        return spotifyApiDataAccessor.getPlaylistTracks(playlistId);
     }
 }
