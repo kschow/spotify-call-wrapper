@@ -1,10 +1,10 @@
 package com.wanderingmotivation.spotify.callwrapper.model;
 
-import com.wrapper.spotify.enums.AlbumType;
 import com.wrapper.spotify.model_objects.specification.Album;
 import com.wrapper.spotify.model_objects.specification.ArtistSimplified;
 import com.wrapper.spotify.model_objects.specification.Image;
 import com.wrapper.spotify.model_objects.specification.TrackSimplified;
+import lombok.AllArgsConstructor;
 import lombok.Data;
 
 import java.util.Arrays;
@@ -15,10 +15,11 @@ import java.util.stream.Collectors;
  * A simplified model for albums
  */
 @Data
+@AllArgsConstructor
 public class WrappedAlbum {
     private String spotifyId;
     private List<String> artistIds;
-    private AlbumType albumType;
+    private String albumType;
     private List<String> genres;
     private String name;
     private int popularity;
@@ -32,7 +33,9 @@ public class WrappedAlbum {
         this.artistIds = Arrays.stream(album.getArtists())
                 .map(ArtistSimplified::getId)
                 .collect(Collectors.toList());
-        this.albumType = album.getAlbumType();
+        this.albumType = album.getAlbumType().toString();
+        this.genres = Arrays.stream(album.getGenres())
+                .collect(Collectors.toList());
         this.name = album.getName();
         this.imageUrls = Arrays.stream(album.getImages())
                 .map(Image::getUrl)
