@@ -96,7 +96,7 @@ public class SpotifyApiDataAccessor {
     public Map<String, WrappedTrack> getArtistTracks(final String artistId)
             throws SpotifyWebApiException, IOException {
         final long startTime = System.currentTimeMillis();
-        LOGGER.info("starting get info");
+        LOGGER.info("starting get artist track info");
 
         final Map<String, WrappedAlbum> albums = getManyAlbums(artistId);
 
@@ -225,7 +225,7 @@ public class SpotifyApiDataAccessor {
         return tracks.values()
                 .stream()
                 // remove tracks that might be on collaborative albums that don't include the artist
-                // could do this earlier but the format of SimpleArtist makes it a bit more annoying
+                // could do this earlier but the format of ArtistSimplified makes it a bit more annoying
                 .filter(t -> artistId == null || t.getArtistIds().contains(artistId))
                 .collect(Collectors.toMap(WrappedTrack::getSpotifyId, t -> t));
     }

@@ -2,6 +2,7 @@ package com.wanderingmotivation.spotify.callwrapper.api.spotify;
 
 import com.wanderingmotivation.spotify.callwrapper.model.WrappedAlbum;
 import com.wanderingmotivation.spotify.callwrapper.model.WrappedArtist;
+import com.wanderingmotivation.spotify.callwrapper.model.WrappedPlaylist;
 import com.wrapper.spotify.enums.AlbumType;
 import com.wrapper.spotify.enums.ReleaseDatePrecision;
 import com.wrapper.spotify.exceptions.SpotifyWebApiException;
@@ -11,7 +12,9 @@ import com.wrapper.spotify.model_objects.specification.Artist;
 import com.wrapper.spotify.model_objects.specification.ArtistSimplified;
 import com.wrapper.spotify.model_objects.specification.Image;
 import com.wrapper.spotify.model_objects.specification.Paging;
+import com.wrapper.spotify.model_objects.specification.PlaylistSimplified;
 import com.wrapper.spotify.model_objects.specification.TrackSimplified;
+import com.wrapper.spotify.model_objects.specification.User;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -66,7 +69,16 @@ class SpotifyApiDataAccessorTest {
     }
 
     @Test
-    void searchForPlaylist() {
+    @DisplayName("Base search for playlist test")
+    void searchForPlaylist() throws IOException, SpotifyWebApiException {
+        final int testCount = 10;
+        final String testSearchTerm = "search";
+
+        final List<WrappedPlaylist> expectedPlaylists = buildWrappedPlaylists(testCount);
+        final Paging<PlaylistSimplified> mockPlaylistPage = buildSimplifiedPlaylistPage(testCount);
+        when(mockSpotifyApiWrapper.searchForPlaylist(testSearchTerm)).thenReturn(mockPlaylistPage);
+
+        assertEquals(expectedPlaylists, spotifyApiDataAccessor.searchForPlaylist(testSearchTerm));
     }
 
     @Test
@@ -193,5 +205,46 @@ class SpotifyApiDataAccessorTest {
             albums[i] = albumBuilder.build();
         }
         return albums;
+    }
+
+    private List<WrappedPlaylist> buildWrappedPlaylists(int testCount) {
+        final List<WrappedPlaylist> playlists = new ArrayList<>();
+
+        for (int i = 0; i < testCount; i++) {
+            final String itemString = Integer.toString(i);
+
+            final List<String> imageUrls = new ArrayList<>();
+            imageUrls.add("image url " + itemString);
+            final WrappedPlaylist playlist = new WrappedPlaylist(itemString,
+                    "user " + itemString,
+                    "name " + itemString,
+                    imageUrls
+            );
+            playlists.add(playlist);
+        }
+        return playlists;
+    }
+
+    private Paging<PlaylistSimplified> buildSimplifiedPlaylistPage(int testCount) {
+        final Paging.Builder<PlaylistSimplified> playlistPageBuilder = new Paging.Builder<>();
+
+        final PlaylistSimplified[] playlistPageItems = new PlaylistSimplified[testCount];
+        for (int i = 0; i < testCount; i++) {
+            final String itemString = Integer.toString(i);
+
+            final PlaylistSimplified.Builder playlistBuilder = new PlaylistSimplified.Builder();
+            playlistBuilder.setId(itemString);
+            playlistBuilder.setName("name " + itemString);
+            final User owner = new User.Builder().setId("user " + itemString).build();
+            playlistBuilder.setOwner(owner);
+            final Image image = new Image.Builder().setUrl("image url " + itemString).build();
+            playlistBuilder.setImages(image);
+
+            playlistPageItems[i] = playlistBuilder.build();
+        }
+        playlistPageBuilder.setItems(playlistPageItems);
+        playlistPageBuilder.setTotal(testCount);
+
+        return playlistPageBuilder.build();
     }
 }
