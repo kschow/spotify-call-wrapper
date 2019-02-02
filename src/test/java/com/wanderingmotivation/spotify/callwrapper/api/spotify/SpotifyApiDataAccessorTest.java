@@ -24,8 +24,14 @@ import org.mockito.MockitoAnnotations;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyInt;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class SpotifyApiDataAccessorTest {
@@ -59,9 +65,9 @@ class SpotifyApiDataAccessorTest {
         final String testSearchTerm = "search";
 
         final List<WrappedAlbum> expectedAlbums = buildWrappedAlbumList(testCount);
-        final Paging<AlbumSimplified> mockSimpleAlbumPage = buildSimplifiedAlbumPage(testCount);
+        final Paging<AlbumSimplified> mockSimpleAlbumPage = buildSimplifiedAlbumPage(testCount, 0);
         final String[] mockAlbumIds = buildIdsArray(0, testCount);
-        final Album[] mockAlbums = buildAlbums(testCount);
+        final Album[] mockAlbums = buildAlbums(testCount, 0);
         when(mockSpotifyApiWrapper.searchForAlbum(testSearchTerm)).thenReturn(mockSimpleAlbumPage);
         when(mockSpotifyApiWrapper.getSpotifyAlbums(mockAlbumIds)).thenReturn(mockAlbums);
 
@@ -82,24 +88,77 @@ class SpotifyApiDataAccessorTest {
     }
 
     @Test
-    void getArtistTracks() {
+    @DisplayName("Base get many albums test without pagination")
+    void getManyAlbums() throws IOException, SpotifyWebApiException {
+        final String testArtist = "test artist";
+        final int testCount = 15;
+
+        final List<WrappedAlbum> wrappedAlbums = buildWrappedAlbumList(testCount);
+        final Map<String, WrappedAlbum> expectedAlbums = wrappedAlbums.stream()
+                .collect(Collectors.toMap(WrappedAlbum::getSpotifyId, a -> a));
+
+        final Paging<AlbumSimplified> albumPage = buildSimplifiedAlbumPage(testCount, 0);
+        when(mockSpotifyApiWrapper.getSpotifyArtistsAlbums(testArtist, 0)).thenReturn(albumPage);
+
+        final String[] albumIds = buildIdsArray(0, testCount);
+        final Album[] spotifyAlbums = buildAlbums(testCount, 0);
+        when(mockSpotifyApiWrapper.getSpotifyAlbums(albumIds)).thenReturn(spotifyAlbums);
+
+        final Map<String, WrappedAlbum> returnedAlbums = spotifyApiDataAccessor.getManyAlbums(testArtist);
+
+        verify(mockSpotifyApiWrapper, times(1)).getSpotifyArtistsAlbums(any(String.class), anyInt());
+        verify(mockSpotifyApiWrapper, times(1)).getSpotifyAlbums(any(String[].class));
+
+        assertEquals(expectedAlbums, returnedAlbums);
     }
 
     @Test
-    void getPlaylistTracks() {
+    @DisplayName("Get many albums test with pagination")
+    void getManyAlbumsWithPagination() throws IOException, SpotifyWebApiException {
+        final String testArtist = "test artist with pagination";
+        final int testCount = 65;
+
+        final List<WrappedAlbum> wrappedAlbums = buildWrappedAlbumList(testCount);
+        final Map<String, WrappedAlbum> expectedAlbums = wrappedAlbums.stream()
+                .collect(Collectors.toMap(WrappedAlbum::getSpotifyId, a -> a));
+
+        final Paging<AlbumSimplified> albumPage0 = buildSimplifiedAlbumPage(testCount, 0);
+        final Paging<AlbumSimplified> albumPage1 =
+                buildSimplifiedAlbumPage(testCount, SpotifyApiConstants.ARTIST_ALBUM_PAGE_SIZE);
+        when(mockSpotifyApiWrapper.getSpotifyArtistsAlbums(testArtist, 0)).thenReturn(albumPage0);
+        when(mockSpotifyApiWrapper.getSpotifyArtistsAlbums(testArtist, SpotifyApiConstants.ARTIST_ALBUM_PAGE_SIZE))
+                .thenReturn(albumPage1);
+
+        final String[] albumIds0 = buildIdsArray(0, SpotifyApiConstants.ALBUM_PAGE_SIZE);
+        final String[] albumIds1 = buildIdsArray(SpotifyApiConstants.ALBUM_PAGE_SIZE, SpotifyApiConstants.ALBUM_PAGE_SIZE);
+        final String[] albumIds2 = buildIdsArray(SpotifyApiConstants.ALBUM_PAGE_SIZE * 2, SpotifyApiConstants.ALBUM_PAGE_SIZE);
+        final String[] albumIds3 = buildIdsArray(SpotifyApiConstants.ALBUM_PAGE_SIZE * 3, testCount - (SpotifyApiConstants.ALBUM_PAGE_SIZE * 3));
+        final Album[] spotifyAlbums0 = buildAlbums(testCount, 0);
+        final Album[] spotifyAlbums1 = buildAlbums(testCount, SpotifyApiConstants.ALBUM_PAGE_SIZE);
+        final Album[] spotifyAlbums2 = buildAlbums(testCount, SpotifyApiConstants.ALBUM_PAGE_SIZE * 2);
+        final Album[] spotifyAlbums3 = buildAlbums(testCount, SpotifyApiConstants.ALBUM_PAGE_SIZE * 3);
+        when(mockSpotifyApiWrapper.getSpotifyAlbums(albumIds0)).thenReturn(spotifyAlbums0);
+        when(mockSpotifyApiWrapper.getSpotifyAlbums(albumIds1)).thenReturn(spotifyAlbums1);
+        when(mockSpotifyApiWrapper.getSpotifyAlbums(albumIds2)).thenReturn(spotifyAlbums2);
+        when(mockSpotifyApiWrapper.getSpotifyAlbums(albumIds3)).thenReturn(spotifyAlbums3);
+
+        final Map<String, WrappedAlbum> returnedAlbums = spotifyApiDataAccessor.getManyAlbums(testArtist);
+
+        verify(mockSpotifyApiWrapper, times(2)).getSpotifyArtistsAlbums(any(String.class), anyInt());
+        verify(mockSpotifyApiWrapper, times(4)).getSpotifyAlbums(any(String[].class));
+
+        assertEquals(expectedAlbums, returnedAlbums);
     }
 
-    private String[] buildIdsArray(int start, int count) {
+    private String[] buildIdsArray(int start, final int count) {
         final String[] ids = new String[count];
-        int counter = 0;
-
-        while (counter < count) {
-            ids[counter++] = Integer.toString(start++);
+        for (int i = 0; i < count; i++) {
+            ids[i] = Integer.toString(start++);
         }
         return ids;
     }
 
-    private List<WrappedArtist> buildWrappedArtistList(int itemCount) {
+    private List<WrappedArtist> buildWrappedArtistList(final int itemCount) {
         final List<WrappedArtist> wrappedArtists = new ArrayList<>();
         final List<String> testGenres = new ArrayList<>();
         testGenres.add("genre 1");
@@ -114,7 +173,7 @@ class SpotifyApiDataAccessorTest {
         return wrappedArtists;
     }
 
-    private Paging<Artist> buildArtistPage(int itemCount) {
+    private Paging<Artist> buildArtistPage(final int itemCount) {
         final Paging.Builder<Artist> artistPageBuilder = new Paging.Builder<>();
 
         final Artist[] artistPageItems = new Artist[itemCount];
@@ -128,12 +187,13 @@ class SpotifyApiDataAccessorTest {
             final Artist item = artistBuilder.build();
             artistPageItems[i] = item;
         }
+
         artistPageBuilder.setItems(artistPageItems);
         artistPageBuilder.setTotal(itemCount);
         return artistPageBuilder.build();
     }
 
-    private List<WrappedAlbum> buildWrappedAlbumList(int itemCount) {
+    private List<WrappedAlbum> buildWrappedAlbumList(final int itemCount) {
         final List<WrappedAlbum> wrappedAlbums = new ArrayList<>();
 
         for (int i = 0; i < itemCount; i++) {
@@ -160,29 +220,39 @@ class SpotifyApiDataAccessorTest {
                     "DAY");
             wrappedAlbums.add(album);
         }
+
         return wrappedAlbums;
     }
 
-    private Paging<AlbumSimplified> buildSimplifiedAlbumPage(int itemCount) {
+    private Paging<AlbumSimplified> buildSimplifiedAlbumPage(final int itemCount, final int offset) {
         final Paging.Builder<AlbumSimplified> albumPageBuilder = new Paging.Builder<>();
 
-        final AlbumSimplified[] albumPageItems = new AlbumSimplified[itemCount];
-        for (int i = 0; i < itemCount; i++) {
+        final int remainingItemCount = itemCount - offset;
+        int pageItemCount = remainingItemCount > SpotifyApiConstants.ARTIST_ALBUM_PAGE_SIZE ?
+                SpotifyApiConstants.ARTIST_ALBUM_PAGE_SIZE : remainingItemCount;
+
+        final AlbumSimplified[] albumPageItems = new AlbumSimplified[pageItemCount];
+        for (int i = offset; i < (offset + pageItemCount); i++) {
             final AlbumSimplified.Builder albumBuilder = new AlbumSimplified.Builder();
             final String itemString = Integer.toString(i);
 
             albumBuilder.setId(itemString);
-            albumPageItems[i] = albumBuilder.build();
+            albumPageItems[i - offset] = albumBuilder.build();
         }
+
         albumPageBuilder.setTotal(itemCount);
         albumPageBuilder.setItems(albumPageItems);
         return albumPageBuilder.build();
     }
 
-    private Album[] buildAlbums(int itemCount) {
-        final Album[] albums = new Album[itemCount];
+    private Album[] buildAlbums(final int itemCount, final int offset) {
+        final int remainingItemCount = itemCount - offset;
+        int pageItemCount = remainingItemCount > SpotifyApiConstants.ALBUM_PAGE_SIZE ?
+                SpotifyApiConstants.ALBUM_PAGE_SIZE : remainingItemCount;
 
-        for (int i = 0; i < itemCount; i++) {
+        final Album[] albums = new Album[pageItemCount];
+
+        for (int i = offset; i < (offset + pageItemCount); i++) {
             final Album.Builder albumBuilder = new Album.Builder();
             final String itemString = Integer.toString(i);
 
@@ -202,12 +272,13 @@ class SpotifyApiDataAccessorTest {
             albumBuilder.setReleaseDate("releasedate " + itemString);
             albumBuilder.setReleaseDatePrecision(ReleaseDatePrecision.DAY);
 
-            albums[i] = albumBuilder.build();
+            albums[i - offset] = albumBuilder.build();
         }
+
         return albums;
     }
 
-    private List<WrappedPlaylist> buildWrappedPlaylists(int testCount) {
+    private List<WrappedPlaylist> buildWrappedPlaylists(final int testCount) {
         final List<WrappedPlaylist> playlists = new ArrayList<>();
 
         for (int i = 0; i < testCount; i++) {
@@ -222,10 +293,11 @@ class SpotifyApiDataAccessorTest {
             );
             playlists.add(playlist);
         }
+
         return playlists;
     }
 
-    private Paging<PlaylistSimplified> buildSimplifiedPlaylistPage(int testCount) {
+    private Paging<PlaylistSimplified> buildSimplifiedPlaylistPage(final int testCount) {
         final Paging.Builder<PlaylistSimplified> playlistPageBuilder = new Paging.Builder<>();
 
         final PlaylistSimplified[] playlistPageItems = new PlaylistSimplified[testCount];
@@ -242,9 +314,9 @@ class SpotifyApiDataAccessorTest {
 
             playlistPageItems[i] = playlistBuilder.build();
         }
+
         playlistPageBuilder.setItems(playlistPageItems);
         playlistPageBuilder.setTotal(testCount);
-
         return playlistPageBuilder.build();
     }
 }

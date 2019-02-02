@@ -144,7 +144,7 @@ public class SpotifyApiDataAccessor {
         return getManyTracks(trackIds, null);
     }
 
-    private Map<String, WrappedAlbum> getManyAlbums(final String artistId) throws IOException, SpotifyWebApiException {
+    Map<String, WrappedAlbum> getManyAlbums(final String artistId) throws IOException, SpotifyWebApiException {
         final List<String> albumIds = new ArrayList<>();
 
         for (int offset = 0; ; offset += SpotifyApiConstants.ARTIST_ALBUM_PAGE_SIZE) {
@@ -173,7 +173,7 @@ public class SpotifyApiDataAccessor {
         return albums;
     }
 
-    private List<String> getAlbumTracks(final List<String> albumIds) throws IOException, SpotifyWebApiException {
+    List<String> getAlbumTracks(final List<String> albumIds) throws IOException, SpotifyWebApiException {
         final List<String> trackIds = new ArrayList<>();
 
         for (final String albumId : albumIds) {
@@ -194,7 +194,7 @@ public class SpotifyApiDataAccessor {
         return trackIds;
     }
 
-    private Map<String, WrappedTrack> getManyTracks(final List<String> trackIds, final String artistId)
+    Map<String, WrappedTrack> getManyTracks(final List<String> trackIds, final String artistId)
             throws IOException, SpotifyWebApiException {
         final Map<String, WrappedTrack> tracks = new HashMap<>();
         final List<List<String>> partitions = ListUtils.partition(trackIds, SpotifyApiConstants.TRACK_PAGE_SIZE);
