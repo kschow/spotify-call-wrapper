@@ -27,7 +27,6 @@ import static com.wanderingmotivation.spotify.callwrapper.util.ThrowingFunctionW
 public class SpotifyApiWrapper {
     private static final Logger LOGGER = Logger.getLogger(SpotifyApiDataAccessor.class);
 
-
     private final SpotifyApi spotifyApi;
     private final ClientCredentialsRequest clientCredentialsRequest;
 

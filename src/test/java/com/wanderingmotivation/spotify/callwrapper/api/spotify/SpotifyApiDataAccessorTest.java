@@ -15,6 +15,8 @@ import com.wrapper.spotify.model_objects.specification.Paging;
 import com.wrapper.spotify.model_objects.specification.PlaylistSimplified;
 import com.wrapper.spotify.model_objects.specification.TrackSimplified;
 import com.wrapper.spotify.model_objects.specification.User;
+import org.apache.commons.collections4.ListUtils;
+import org.assertj.core.util.Lists;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -23,6 +25,7 @@ import org.mockito.MockitoAnnotations;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -150,10 +153,63 @@ class SpotifyApiDataAccessorTest {
         assertEquals(expectedAlbums, returnedAlbums);
     }
 
+    @Test
+    @DisplayName("Base get album tracks test one album without pagination")
+    void getAlbumTracks() throws IOException, SpotifyWebApiException {
+        final String testAlbum = "test album";
+        final int testCount = 30;
+
+        final List<String> expectedTrackIds = Arrays.asList(buildIdsArray(0, testCount));
+
+        final Paging<TrackSimplified> trackIds = buildSimplifiedTrackPage(testCount, 0, "");
+        when(mockSpotifyApiWrapper.getSpotifyAlbumTracks(testAlbum, 0)).thenReturn(trackIds);
+
+        final List<String> returnedTrackIds = spotifyApiDataAccessor.getAlbumTracks(Lists.newArrayList(testAlbum));
+        verify(mockSpotifyApiWrapper, times(1)).getSpotifyAlbumTracks(any(String.class), anyInt());
+
+        assertEquals(expectedTrackIds, returnedTrackIds);
+    }
+
+    @Test
+    @DisplayName("Get album tracks with multiple albums and pagination")
+    void getAlbumTracksWithPagination() throws IOException, SpotifyWebApiException {
+        final String testAlbum1 = "testAlbum1-";
+        final String testAlbum2 = "testAlbum2-";
+        final int testCount1 = 10;
+        final int testCount2 = 135;
+
+        final List<String> totalExpectedTrackIds = ListUtils.union(
+                Arrays.asList(buildIdsArray(testCount1, testAlbum1)),
+                Arrays.asList(buildIdsArray(testCount2, testAlbum2)));
+
+        final Paging<TrackSimplified> album1TrackIds = buildSimplifiedTrackPage(testCount1, 0, testAlbum1);
+        when(mockSpotifyApiWrapper.getSpotifyAlbumTracks(testAlbum1, 0)).thenReturn(album1TrackIds);
+
+        final Paging<TrackSimplified> album2TrackIds0 = buildSimplifiedTrackPage(testCount2, 0, testAlbum2);
+        final Paging<TrackSimplified> album2TrackIds1 = buildSimplifiedTrackPage(testCount2, SpotifyApiConstants.ALBUM_TRACK_PAGE_SIZE, testAlbum2);
+        final Paging<TrackSimplified> album2TrackIds2 = buildSimplifiedTrackPage(testCount2, SpotifyApiConstants.ALBUM_TRACK_PAGE_SIZE * 2, testAlbum2);
+        when(mockSpotifyApiWrapper.getSpotifyAlbumTracks(testAlbum2, 0)).thenReturn(album2TrackIds0);
+        when(mockSpotifyApiWrapper.getSpotifyAlbumTracks(testAlbum2, SpotifyApiConstants.ALBUM_TRACK_PAGE_SIZE)).thenReturn(album2TrackIds1);
+        when(mockSpotifyApiWrapper.getSpotifyAlbumTracks(testAlbum2, SpotifyApiConstants.ALBUM_TRACK_PAGE_SIZE * 2)).thenReturn(album2TrackIds2);
+
+        final List<String> returnedTrackIds = spotifyApiDataAccessor.getAlbumTracks(Lists.newArrayList(testAlbum1, testAlbum2));
+        verify(mockSpotifyApiWrapper, times(4)).getSpotifyAlbumTracks(any(String.class), anyInt());
+
+        assertEquals(totalExpectedTrackIds, returnedTrackIds);
+    }
+
     private String[] buildIdsArray(int start, final int count) {
         final String[] ids = new String[count];
         for (int i = 0; i < count; i++) {
             ids[i] = Integer.toString(start++);
+        }
+        return ids;
+    }
+
+    private String[] buildIdsArray(final int count, final String prefix) {
+        final String[] ids = new String[count];
+        for (int i = 0; i < count; i++) {
+            ids[i] = prefix + i;
         }
         return ids;
     }
@@ -278,10 +334,10 @@ class SpotifyApiDataAccessorTest {
         return albums;
     }
 
-    private List<WrappedPlaylist> buildWrappedPlaylists(final int testCount) {
+    private List<WrappedPlaylist> buildWrappedPlaylists(final int itemCount) {
         final List<WrappedPlaylist> playlists = new ArrayList<>();
 
-        for (int i = 0; i < testCount; i++) {
+        for (int i = 0; i < itemCount; i++) {
             final String itemString = Integer.toString(i);
 
             final List<String> imageUrls = new ArrayList<>();
@@ -297,11 +353,11 @@ class SpotifyApiDataAccessorTest {
         return playlists;
     }
 
-    private Paging<PlaylistSimplified> buildSimplifiedPlaylistPage(final int testCount) {
+    private Paging<PlaylistSimplified> buildSimplifiedPlaylistPage(final int itemCount) {
         final Paging.Builder<PlaylistSimplified> playlistPageBuilder = new Paging.Builder<>();
 
-        final PlaylistSimplified[] playlistPageItems = new PlaylistSimplified[testCount];
-        for (int i = 0; i < testCount; i++) {
+        final PlaylistSimplified[] playlistPageItems = new PlaylistSimplified[itemCount];
+        for (int i = 0; i < itemCount; i++) {
             final String itemString = Integer.toString(i);
 
             final PlaylistSimplified.Builder playlistBuilder = new PlaylistSimplified.Builder();
@@ -316,7 +372,29 @@ class SpotifyApiDataAccessorTest {
         }
 
         playlistPageBuilder.setItems(playlistPageItems);
-        playlistPageBuilder.setTotal(testCount);
+        playlistPageBuilder.setTotal(itemCount);
         return playlistPageBuilder.build();
+    }
+
+    private Paging<TrackSimplified> buildSimplifiedTrackPage(final int itemCount, final int offset, final String prefix) {
+        final Paging.Builder<TrackSimplified> trackPageBuilder = new Paging.Builder<>();
+
+        final int remainingItemCount = itemCount - offset;
+        int pageItemCount = remainingItemCount > SpotifyApiConstants.ARTIST_ALBUM_PAGE_SIZE ?
+                SpotifyApiConstants.ARTIST_ALBUM_PAGE_SIZE : remainingItemCount;
+
+        final TrackSimplified[] trackPageItems = new TrackSimplified[pageItemCount];
+        for (int i = offset; i < (offset + pageItemCount); i++) {
+            final String itemString = prefix + i;
+
+            final TrackSimplified.Builder trackBuilder = new TrackSimplified.Builder();
+            trackBuilder.setId(itemString);
+
+            trackPageItems[i - offset] = trackBuilder.build();
+        }
+        trackPageBuilder.setItems(trackPageItems);
+        trackPageBuilder.setTotal(itemCount);
+
+        return trackPageBuilder.build();
     }
 }
