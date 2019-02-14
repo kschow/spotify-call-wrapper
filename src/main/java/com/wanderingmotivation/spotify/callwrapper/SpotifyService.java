@@ -105,7 +105,6 @@ public class SpotifyService {
      * @throws SpotifyWebApiException Thrown when there is some Spotify error, e.g. TooManyRequestsException
      */
     @GetMapping("/getPlaylistTracks/{playlistId}")
-    @Deprecated
     public Map<String, WrappedTrack> getPlaylistTracks(@PathVariable final String playlistId)
             throws IOException, SpotifyWebApiException {
         return spotifyApiDataAccessor.getPlaylistTracks(playlistId);
