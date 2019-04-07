@@ -14,7 +14,7 @@ import com.wrapper.spotify.model_objects.specification.PlaylistTrack;
 import com.wrapper.spotify.model_objects.specification.Track;
 import com.wrapper.spotify.model_objects.specification.TrackSimplified;
 import com.wrapper.spotify.requests.authorization.client_credentials.ClientCredentialsRequest;
-import org.apache.log4j.Logger;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -24,9 +24,8 @@ import java.util.function.Function;
 import static com.wanderingmotivation.spotify.callwrapper.util.ThrowingFunctionWrappers.throwingFunctionWrapper;
 
 @Component
+@Slf4j
 public class SpotifyApiWrapper {
-    private static final Logger LOGGER = Logger.getLogger(SpotifyApiDataAccessor.class);
-
     private final SpotifyApi spotifyApi;
     private final ClientCredentialsRequest clientCredentialsRequest;
 
@@ -42,7 +41,7 @@ public class SpotifyApiWrapper {
     private void getAuthToken() throws IOException, SpotifyWebApiException {
         final ClientCredentials credentials = clientCredentialsRequest.execute();
         spotifyApi.setAccessToken(credentials.getAccessToken());
-        LOGGER.info("Credentials expire in: " + credentials.getExpiresIn());
+        log.debug("Credentials expire in: " + credentials.getExpiresIn());
     }
 
     /**
@@ -61,7 +60,7 @@ public class SpotifyApiWrapper {
         } catch (final Exception e) {
             if (e.getCause() instanceof UnauthorizedException) {
                 // this occurs when the access token doesn't exist or expires
-                LOGGER.info("bad access token, getting a new one");
+                log.debug("bad access token, getting a new one");
                 getAuthToken();
                 spotifyObject = spotifyApiRequest.apply(id);
             } else {

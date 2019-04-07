@@ -6,7 +6,7 @@ import com.wanderingmotivation.spotify.callwrapper.model.WrappedArtist;
 import com.wanderingmotivation.spotify.callwrapper.model.WrappedPlaylist;
 import com.wanderingmotivation.spotify.callwrapper.model.WrappedTrack;
 import com.wrapper.spotify.exceptions.SpotifyWebApiException;
-import org.apache.log4j.Logger;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -19,9 +19,8 @@ import java.util.Map;
 
 @RestController
 @CrossOrigin
+@Slf4j
 public class SpotifyService {
-    private static final Logger LOGGER = Logger.getLogger(SpotifyService.class);
-
     private final SpotifyApiDataAccessor spotifyApiDataAccessor;
 
     SpotifyService(SpotifyApiDataAccessor spotifyApiDataAccessor) {

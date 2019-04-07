@@ -14,8 +14,8 @@ import com.wrapper.spotify.model_objects.specification.PlaylistSimplified;
 import com.wrapper.spotify.model_objects.specification.PlaylistTrack;
 import com.wrapper.spotify.model_objects.specification.Track;
 import com.wrapper.spotify.model_objects.specification.TrackSimplified;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.ListUtils;
-import org.apache.log4j.Logger;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -27,9 +27,8 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
+@Slf4j
 public class SpotifyApiDataAccessor {
-    private static final Logger LOGGER = Logger.getLogger(SpotifyApiDataAccessor.class);
-
     private final SpotifyApiWrapper spotifyApiWrapper;
 
     SpotifyApiDataAccessor(SpotifyApiWrapper spotifyApiWrapper) {
@@ -96,7 +95,7 @@ public class SpotifyApiDataAccessor {
     public Map<String, WrappedTrack> getArtistTracks(final String artistId)
             throws SpotifyWebApiException, IOException {
         final long startTime = System.currentTimeMillis();
-        LOGGER.info("starting get artist track info");
+        log.debug("starting get artist track info");
 
         final Map<String, WrappedAlbum> albums = getManyAlbums(artistId);
 
@@ -106,13 +105,13 @@ public class SpotifyApiDataAccessor {
                 .collect(Collectors.toList());
 
         final long albumTime = System.currentTimeMillis();
-        LOGGER.info("got album info, took: " + (albumTime - startTime) + "ms");
+        log.debug("got album info, took: " + (albumTime - startTime) + "ms");
 
         final List<String> trackIds = getAlbumTracks(albumIds);
         final Map<String, WrappedTrack> tracks = getManyTracks(trackIds, artistId);
 
         final long trackTime = System.currentTimeMillis();
-        LOGGER.info("got track info, took: " + (trackTime - albumTime) + "ms");
+        log.debug("got track info, took: " + (trackTime - albumTime) + "ms");
 
         return tracks;
     }
@@ -130,7 +129,7 @@ public class SpotifyApiDataAccessor {
         for (int offset = 0; ; offset += SpotifyApiConstants.PLAYLIST_TRACK_PAGE_SIZE) {
             final Paging<PlaylistTrack> page = spotifyApiWrapper.getSpotifyPlaylistTracks(playlistId, offset);
             final int totalTracks = page.getTotal();
-            LOGGER.info(String.format("getting ids for playlist tracks %s to %s out of %s",
+            log.debug(String.format("getting ids for playlist tracks %s to %s out of %s",
                     offset, offset + SpotifyApiConstants.PLAYLIST_TRACK_PAGE_SIZE, totalTracks));
             trackIds.addAll(Arrays.stream(page.getItems())
                     .map(PlaylistTrack::getTrack)
@@ -150,7 +149,7 @@ public class SpotifyApiDataAccessor {
         for (int offset = 0; ; offset += SpotifyApiConstants.ARTIST_ALBUM_PAGE_SIZE) {
             final Paging<AlbumSimplified> page = spotifyApiWrapper.getSpotifyArtistsAlbums(artistId, offset);
             final int totalAlbums = page.getTotal();
-            LOGGER.info(String.format("getting ids for artist albums %s to %s out of %s",
+            log.debug(String.format("getting ids for artist albums %s to %s out of %s",
                     offset, offset + SpotifyApiConstants.ARTIST_ALBUM_PAGE_SIZE, totalAlbums));
             albumIds.addAll(Arrays.stream(page.getItems())
                     .map(AlbumSimplified::getId)
@@ -180,7 +179,7 @@ public class SpotifyApiDataAccessor {
             for (int offset = 0; ; offset += SpotifyApiConstants.ALBUM_TRACK_PAGE_SIZE) {
                 final Paging<TrackSimplified> page = spotifyApiWrapper.getSpotifyAlbumTracks(albumId, offset);
                 final int totalTracks = page.getTotal();
-                LOGGER.info(String.format("getting ids for album tracks %s to %s out of %s",
+                log.debug(String.format("getting ids for album tracks %s to %s out of %s",
                         offset, offset + SpotifyApiConstants.ALBUM_TRACK_PAGE_SIZE, totalTracks));
                 trackIds.addAll(Arrays.stream(page.getItems())
                         .map(TrackSimplified::getId)
@@ -218,7 +217,7 @@ public class SpotifyApiDataAccessor {
                     t.setAudioFeatures(a);
                 }
             }
-            LOGGER.info(String.format("getting track information for %s to %s out of %s",
+            log.debug(String.format("getting track information for %s to %s out of %s",
                     i, i += SpotifyApiConstants.TRACK_PAGE_SIZE, totalTracks));
         }
 

@@ -38,7 +38,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class SpotifyApiDataAccessorTest {
-
     private SpotifyApiDataAccessor spotifyApiDataAccessor;
     @Mock private SpotifyApiWrapper mockSpotifyApiWrapper;
 
