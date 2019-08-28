@@ -13,7 +13,6 @@ buildscript {
 apply plugin: 'java'
 apply plugin: 'eclipse'
 apply plugin: 'idea'
-apply plugin: 'war'
 apply plugin: 'org.springframework.boot'
 
 group = 'com.wanderingmotivation.spotify'
@@ -22,11 +21,6 @@ def lombokVersion = '1.16.18'
 
 repositories {
     mavenCentral()
-}
-
-war {
-    baseName = 'spotify-call-wrapper'
-    version = '0.0.1'
 }
 
 dependencies {
